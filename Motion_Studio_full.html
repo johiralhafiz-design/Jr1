@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Motion Studio</title>
+  <style>
+    :root { --bg:#171512; --panel:#23211d; --panel2:#2d2a24; --text:#f1eee7; --muted:#aaa49a; --accent:#e47d5b; --line:#3a372f; }
+    :root[data-theme="light"] { --bg:#f5f3eb; --panel:#fff; --panel2:#eeece3; --text:#24211d; --muted:#716c62; --accent:#ca6241; --line:#d7d2c5; }
+    * { box-sizing:border-box; }
+    body { margin:0; height:100vh; overflow:hidden; background:var(--bg); color:var(--text); font-family:"Noto Sans Bengali",system-ui,sans-serif; }
+    button,textarea,select,input { font:inherit; }
+    button { cursor:pointer; }
+    .shell { height:100%; display:grid; grid-template-columns:248px minmax(0,1fr); }
+    aside { background:var(--panel); border-right:1px solid var(--line); padding:14px; display:flex; flex-direction:column; }
+    main { min-width:0; display:flex; flex-direction:column; }
+    .brand { display:flex; align-items:center; gap:9px; font-size:18px; font-weight:800; margin-bottom:18px; }
+    .brand i { color:var(--accent); font-style:normal; }
+    .side-btn { width:100%; border:1px solid var(--line); background:var(--panel2); color:var(--text); border-radius:12px; padding:11px 12px; margin-bottom:8px; text-align:left; }
+    .side-btn:hover { border-color:var(--accent); }
+    .spacer { flex:1; }
+    header { height:64px; border-bottom:1px solid var(--line); display:flex; align-items:center; justify-content:space-between; padding:0 20px; }
+    .header-actions { display:flex; align-items:center; gap:8px; }
+    .toggle,.icon-btn { border:1px solid var(--line); background:var(--panel); color:var(--text); border-radius:10px; min-height:38px; padding:8px 11px; }
+    .toggle.on { background:var(--accent); color:#1a1714; border-color:var(--accent); }
+    .workspace { min-height:0; flex:1; display:flex; }
+    .chat { flex:1; min-width:0; display:flex; flex-direction:column; }
+    .messages { flex:1; overflow-y:auto; padding:24px max(16px,calc((100% - 760px)/2)); }
+    .welcome { height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; }
+    .welcome h1 { margin:10px 0 6px; }
+    .welcome p { margin:0 0 22px; color:var(--muted); }
+    .message { max-width:760px; margin:0 auto 16px; }
+    .message.user { display:flex; justify-content:flex-end; }
+    .bubble { max-width:82%; border:1px solid var(--line); background:var(--panel2); padding:12px 14px; border-radius:16px; line-height:1.6; white-space:pre-wrap; }
+    .assistant { display:flex; gap:10px; }
+    .assistant-mark { width:32px; height:32px; flex:none; border-radius:50%; background:var(--accent); color:#1a1714; display:grid; place-items:center; font-weight:900; }
+    .composer-wrap { border-top:1px solid var(--line); padding:12px 16px 16px; }
+    .composer { max-width:760px; margin:auto; border:1px solid var(--line); background:var(--panel); border-radius:18px; padding:12px; position:relative; }
+    textarea { width:100%; resize:none; border:0; outline:0; background:transparent; color:var(--text); min-height:58px; line-height:1.5; }
+    .composer-footer { display:flex; justify-content:space-between; align-items:center; }
+    .left { display:flex; gap:8px; position:relative; }
+    .send { width:38px; height:38px; border:0; border-radius:10px; background:var(--accent); color:#1a1714; font-size:18px; }
+    .send:disabled { opacity:.45; }
+    .popover { display:none; position:absolute; z-index:30; left:0; bottom:48px; width:min(390px,calc(100vw - 32px)); max-height:520px; overflow:hidden; background:var(--panel); border:1px solid var(--line); border-radius:16px; box-shadow:0 18px 60px #0008; }
+    .popover.open { display:block; }
+    .pop-head { padding:12px; border-bottom:1px solid var(--line); }
+    .pop-head input { width:100%; border:1px solid var(--line); border-radius:10px; background:var(--bg); color:var(--text); padding:9px 10px; }
+    .filters { display:flex; gap:6px; margin-top:8px; flex-wrap:wrap; }
+    .filter { border:1px solid var(--line); border-radius:8px; background:var(--panel2); color:var(--text); padding:5px 9px; }
+    .filter.active { background:var(--accent); color:#1a1714; border-color:var(--accent); }
+    .voice-list { max-height:330px; overflow-y:auto; padding:6px; }
+    .voice { display:flex; align-items:center; justify-content:space-between; gap:8px; border-radius:10px; padding:9px; cursor:pointer; }
+    .voice:hover,.voice.selected { background:var(--panel2); }
+    .voice small { color:var(--muted); display:block; }
+    .voice button { border:1px solid var(--line); background:var(--bg); color:var(--text); border-radius:8px; padding:6px 8px; }
+    .preview { width:360px; display:none; border-left:1px solid var(--line); background:var(--panel); padding:12px; }
+    .preview.open { display:block; }
+    .preview canvas { width:100%; aspect-ratio:9/16; border-radius:12px; background:#0d0c0b; }
+    .preview-actions { display:flex; gap:8px; margin-top:10px; }
+    .primary { border:0; border-radius:9px; background:var(--accent); color:#1a1714; padding:9px 12px; }
+    .toast { position:fixed; right:16px; bottom:16px; max-width:340px; background:var(--panel); border:1px solid var(--accent); border-radius:14px; padding:12px; display:none; z-index:50; }
+    .toast.open { display:block; }
+    @media (max-width:760px) { .shell{grid-template-columns:1fr} aside{display:none} .preview.open{position:fixed;z-index:40;inset:64px 0 0;width:100%} }
+  </style>
+</head>
+<body>
+<div class="shell">
+  <aside>
+    <div class="brand"><i>✦</i> Motion Studio</div>
+    <button class="side-btn" id="newChat">＋ নতুন চ্যাট</button>
+    <button class="side-btn" id="themeBtn">◐ থিম পরিবর্তন</button>
+    <div class="spacer"></div>
+    <button class="side-btn" id="alertBtn">🔔 নোটিফিকেশন চালু</button>
+  </aside>
+  <main>
+    <header>
+      <strong>Motion Studio</strong>
+      <div class="header-actions"><button class="toggle" id="assistantBtn">অ্যাসিস্ট্যান্ট OFF</button></div>
+    </header>
+    <div class="workspace">
+      <section class="chat">
+        <div class="messages" id="messages">
+          <div class="welcome" id="welcome">
+            <div style="font-size:34px;color:var(--accent)">✦</div>
+            <h1>কীভাবে সাহায্য করতে পারি?</h1>
+            <p>ভয়েস বেছে নিন এবং আপনার ভিডিওর প্রম্পট লিখুন</p>
+          </div>
+        </div>
+        <div class="composer-wrap">
+          <div class="composer">
+            <textarea id="prompt" placeholder="ভালো ডিজাইন করা ৯:১৬ বাংলা ডকুমেন্টারি ভিডিও তৈরি করুন..."></textarea>
+            <div class="composer-footer">
+              <div class="left">
+                <button class="icon-btn" id="voiceBtn">🎙 <span id="voiceName">নবনীতা — বাংলাদেশ</span> ▾</button>
+                <div class="popover" id="voicePopover">
+                  <div class="pop-head">
+                    <input id="voiceSearch" placeholder="ভয়েস খুঁজুন">
+                    <div class="filters">
+                      <button class="filter active" data-filter="all">সব</button>
+                      <button class="filter" data-filter="bn">বাংলা</button>
+                      <button class="filter" data-filter="documentary">ডকুমেন্টারি</button>
+                      <button class="filter" data-filter="system">সিস্টেম ফ্রি</button>
+                    </div>
+                  </div>
+                  <div class="voice-list" id="voiceList"></div>
+                </div>
+              </div>
+              <button class="send" id="sendBtn" disabled>↑</button>
+            </div>
+          </div>
+        </div>
+      </section>
+      <aside class="preview" id="preview">
+        <canvas id="canvas" width="540" height="960"></canvas>
+        <div class="preview-actions"><button class="primary" id="downloadBtn">PNG ডাউনলোড</button><button class="icon-btn" id="closePreview">বন্ধ</button></div>
+      </aside>
+    </div>
+  </main>
+</div>
+<div class="toast" id="toast"></div>
+<script>
+const baseVoices=[
+ {id:'bn-BD-NabanitaNeural',name:'নবনীতা — ডকুমেন্টারি বাংলা',lang:'বাংলাদেশ',gender:'নারী',tag:'documentary bn'},
+ {id:'bn-BD-PradeepNeural',name:'প্রদীপ — গভীর ন্যারেশন',lang:'বাংলাদেশ',gender:'পুরুষ',tag:'documentary bn'},
+ {id:'bn-IN-TanishaaNeural',name:'তানিশা — চলচ্চিত্র বাংলা',lang:'ভারতীয় বাংলা',gender:'নারী',tag:'documentary bn'},
+ {id:'bn-IN-BashkarNeural',name:'ভাস্কর — ইনভেস্টিগেটিভ বাংলা',lang:'ভারতীয় বাংলা',gender:'পুরুষ',tag:'documentary bn'}
+];
+const voices=[...baseVoices];
+let filter='all', search='', selected='bn-BD-NabanitaNeural', assistant=false;
+const $=id=>document.getElementById(id);
+
+function collectSystemVoices(){
+ if(!('speechSynthesis' in window)) return;
+ speechSynthesis.getVoices().filter(v=>/^bn(?:-|$)/i.test(v.lang||'')||/bengali|bangla/i.test(v.name||'')).forEach(v=>{
+  const id='system:'+v.voiceURI;
+  if(!voices.some(x=>x.id===id)) voices.push({id,name:v.name+' — সিস্টেম ফ্রি',lang:v.lang,gender:'সিস্টেম',tag:'system bn',voice:v});
+ });
+ renderVoices();
+}
+if('speechSynthesis' in window){
+ collectSystemVoices(); speechSynthesis.addEventListener('voiceschanged',collectSystemVoices);
+}
+
+function renderVoices(){
+ const q=search.trim().toLowerCase();
+ const list=voices.filter(v=>(filter==='all'||v.tag.includes(filter))&&(!q||v.name.toLowerCase().includes(q)||v.lang.toLowerCase().includes(q)||v.id.toLowerCase().includes(q)));
+ $('voiceList').innerHTML=list.length?'':'<div style="padding:20px;text-align:center;color:var(--muted)">কোনো ভয়েস পাওয়া যায়নি</div>';
+ list.forEach(v=>{
+  const row=document.createElement('div'); row.className='voice'+(v.id===selected?' selected':'');
+  row.innerHTML=`<div><strong>${v.name}</strong><small>${v.lang} · ${v.gender}</small></div><button>শুনুন</button>`;
+  row.addEventListener('click',()=>{selected=v.id;$('voiceName').textContent=v.name;$('voicePopover').classList.remove('open');renderVoices();});
+  row.querySelector('button').addEventListener('click',e=>{e.stopPropagation();audition(v);});
+  $('voiceList').appendChild(row);
+ });
+}
+function audition(v){
+ if(v.voice&&'speechSynthesis' in window){
+  speechSynthesis.cancel(); const u=new SpeechSynthesisUtterance('নমস্কার। এটি আপনার বাংলা ডকুমেন্টারি ভয়েসের নমুনা।');
+  u.voice=v.voice; u.lang=v.voice.lang||'bn-BD'; u.rate=.9; u.pitch=.92; speechSynthesis.speak(u);
+  return;
+ }
+ const ctx=new (window.AudioContext||window.webkitAudioContext)(),osc=ctx.createOscillator(),gain=ctx.createGain();
+ osc.frequency.value=v.gender==='পুরুষ'?120:220; gain.gain.setValueAtTime(.07,ctx.currentTime); gain.gain.exponentialRampToValueAtTime(.001,ctx.currentTime+.8); osc.connect(gain);gain.connect(ctx.destination);osc.start();osc.stop(ctx.currentTime+.8);
+}
+$('voiceBtn').onclick=e=>{$('voicePopover').classList.toggle('open');e.stopPropagation();};
+$('voiceSearch').oninput=e=>{search=e.target.value;renderVoices();};
+document.querySelectorAll('.filter').forEach(b=>b.onclick=()=>{document.querySelectorAll('.filter').forEach(x=>x.classList.remove('active'));b.classList.add('active');filter=b.dataset.filter;renderVoices();});
+document.onclick=e=>{if(!$('voicePopover').contains(e.target)&&!$('voiceBtn').contains(e.target))$('voicePopover').classList.remove('open');};
+
+$('prompt').oninput=()=>{$('sendBtn').disabled=!$('prompt').value.trim();};
+$('prompt').onkeydown=e=>{if(e.key==='Enter'&&!e.shiftKey&&!e.ctrlKey&&!e.metaKey){e.prevent();if(!$('sendBtn').disabled)sendPrompt();}};
+$('sendBtn').onclick=sendPrompt;
+function sendPrompt(){
+ const text=$('prompt').value.trim();if(!text)return;
+ $('welcome').style.display='none';
+ const user=document.createElement('div');user.className='message user';user.innerHTML=`<div class="bubble"></div>`;user.querySelector('div').textContent=text;$('messages').appendChild(user);
+ const assistant=document.createElement('div');assistant.className='message assistant';assistant.innerHTML='<div class="assistant-mark">✦</div><div><div class="bubble"></div><button class="icon-btn" style="margin-top:8px">🎬 প্রিভিউ খুলুন</button></div>';assistant.querySelector('.bubble').textContent=`প্রম্পট তৈরি হয়েছে: “${text.slice(0,150)}”\nভয়েস: ${voices.find(v=>v.id===selected)?.name}`;assistant.querySelector('button').onclick=()=>openPreview(text);$('messages').appendChild(assistant);
+ $('prompt').value='';$('sendBtn').disabled=true;$('messages').scrollTop=$('messages').scrollHeight;
+ openPreview(text);
+}
+function openPreview(text){
+ $('preview').classList.add('open');draw(text);
+}
+function wrap(ctx,text,x,y,maxWidth,lineHeight){ctx.textAlign='center';let line='',lines=[];for(const word of text.split(/\s+/)){const test=line+word+' ';if(ctx.measureText(test).width>maxWidth&&line){lines.push(line.trim());line=word+' ';}else line=test;}lines.push(line.trim());lines.forEach((l,i)=>ctx.fillText(l,x,y+i*lineHeight));}
+function draw(text){
+ const c=$('canvas'),ctx=c.getContext('2d');const w=c.width,h=c.height;const g=ctx.createLinearGradient(0,0,w,h);g.addColorStop(0,'#25211c');g.addColorStop(1,'#090806');ctx.fillStyle=g;ctx.fillRect(0,0,w,h);ctx.strokeStyle='#e47d5b';ctx.lineWidth=3;ctx.strokeRect(24,24,w-48,h-48);ctx.fillStyle='#e47d5b';ctx.font='bold 20px system-ui';ctx.fillText('MOTION STUDIO',w/2,78);ctx.textAlign='center';ctx.fillStyle='#f1eee7';ctx.font='bold 38px system-ui';wrap(ctx,text.slice(0,90),w/2,h/2-40,w-110,48);ctx.fillStyle='#1a1815';ctx.fillRect(42,h-210,w-84,105);ctx.fillStyle='#f3dfd5';ctx.font='21px system-ui';wrap(ctx,'আপনার নির্বাচিত ভয়েস ও বাংলা ক্যাপশন সহ ডকুমেন্টারি প্রিভিউ',w/2,h-155,w-120,30);
+}
+$('closePreview').onclick=()=>$('preview').classList.remove('open');
+$('downloadBtn').onclick=()=>{const a=document.createElement('a');a.download='motion-studio-preview.png';a.href=$('canvas').toDataURL('image/png');a.click();};
+$('newChat').onclick=()=>{$('messages').innerHTML='<div class="welcome" id="welcome"><div style="font-size:34px;color:var(--accent)">✦</div><h1>কীভাবে সাহায্য করতে পারি?</h1><p>ভয়েস বেছে নিন এবং আপনার ভিডিওর প্রম্পট লিখুন</p></div>';$('preview').classList.remove('open');};
+$('themeBtn').onclick=()=>{const cur=document.documentElement.dataset.theme==='light'?'dark':'light';document.documentElement.dataset.theme=cur==='dark'?'':'light';};
+$('assistantBtn').onclick=()=>{assistant=!assistant;$('assistantBtn').textContent='অ্যাসিস্ট্যান্ট '+(assistant?'ON':'OFF');$('assistantBtn').classList.toggle('on',assistant);};
+$('alertBtn').onclick=async()=>{if(!('Notification' in window)){showToast('এই ব্রাউজারে নোটিফিকেশন সমর্থিত নয়।');return;}const p=await Notification.requestPermission();showToast(p==='granted'?'নোটিফিকেশন সক্রিয় হয়েছে':'নোটিফিকেশন অনুমোদিত হয়নি');};
+function showToast(s){$('toast').textContent=s;$('toast').classList.add('open');setTimeout(()=>$('toast').classList.remove('open'),3000);}
+renderVoices();
+</script>
+</body>
+</html>
